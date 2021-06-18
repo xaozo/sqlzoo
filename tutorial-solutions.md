@@ -1,4 +1,4 @@
-# SQLZOO (WIP)
+# SQLZOO
 This file contains my solutions to all tutorials found in [SQLZOO](https://sqlzoo.net/wiki/SQL_Tutorial).
 
 ## Contents
