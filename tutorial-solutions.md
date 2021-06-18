@@ -2,19 +2,19 @@
 This file contains my solutions to all tutorials found in [SQLZOO](https://sqlzoo.net/wiki/SQL_Tutorial).
 
 ## Contents
-0  [SELECT basics](#select-basics), [quiz](#quiz-1)           <br>
-1  [SELECT name](#select-name)                                <br>
-2  [SELECT from WORLD](#select-from-world), [quiz](#quiz-2)   <br>
-3  [SELECT from NOBEL](#select-from-nobel)                    <br>
-4  [SELECT within SELECT](#select-in-select)                  <br>
-5  [SUM and COUNT](#sum-and-count)                            <br>
-6  [JOIN](#join)                                              <br>
-7  [More JOIN operations](#more-join)                         <br>
-8  [Using NULL](#using-null)                                  <br>
-8+ [Numeric Examples](#numeric-examples)                      <br>
-9- [Window function](#window-function)                        <br>
-9+ [COVID 19](#covid-19)                                      <br>
-9  [Self JOIN](#self-join)                                    <br>
+0  [SELECT basics](#select-basics), [SELECT quiz](#quiz-1)                   <br>
+1  [SELECT name](#select-name)                                               <br>
+2  [SELECT from WORLD](#select-from-world), [BBC quiz](#quiz-2)              <br>
+3  [SELECT from NOBEL](#select-from-nobel), [Nobel quiz](#quiz-3)            <br>
+4  [SELECT within SELECT](#select-in-select), [Nested SELECT quiz](#quiz-4)  <br>
+5  [SUM and COUNT](#sum-and-count), [SUM and COUNT quiz](#quiz-5)            <br>
+6  [JOIN](#join), [JOIN quiz](#quiz-6)                                       <br>
+7  [More JOIN operations](#more-join), [JOIN quiz 2](#quiz-7)                <br>
+8  [Using NULL](#using-null), [Using NULL quiz](#quiz-8)                     <br>
+8+ [Numeric Examples](#numeric-examples)                                     <br>
+9- [Window function](#window-function)                                       <br>
+9+ [COVID 19](#covid-19)                                                     <br>
+9  [Self JOIN](#self-join), [Self join quiz](#quiz-9)                        <br>
 
 ## SELECT basics
 1. The example uses a `WHERE` clause to show the population of 'France'. Note that strings (pieces of text that are data) should be in 'single quotes'; Modify it to show the population of Germany
@@ -961,7 +961,94 @@ WHERE new >= 1000 GROUP BY name)
 ORDER BY date
 ```
 
-
+## Self join
+1. How many stops are in the database.
+``` sql
+SELECT COUNT(*) FROM stops
+```
+2. Find the id value for the stop 'Craiglockhart'
+``` sql
+SELECT id FROM stops
+WHERE name = 'Craiglockhart'
+```
+3. Give the id and the name for the stops on the '4' 'LRT' service.
+``` sql
+SELECT id, name FROM stops
+JOIN route ON id=stop
+WHERE num = '4'
+AND company = 'LRT'
+```
+4. The query shown gives the number of routes that visit either London Road (149) or Craiglockhart (53). Run the query and notice the two services that link these stops have a count of 2. Add a HAVING clause to restrict the output to these two routes.
+``` sql
+SELECT company, num, COUNT(*)
+FROM route WHERE stop=149 OR stop=53
+GROUP BY company, num
+HAVING COUNT(*) = 2
+```
+5. Execute the self join shown and observe that b.stop gives all the places you can get to from Craiglockhart, without changing routes. Change the query so that it shows the services from Craiglockhart to London Road.
+``` sql
+SELECT a.company, a.num, a.stop, b.stop
+FROM route a JOIN route b ON
+  (a.company=b.company AND a.num=b.num)
+WHERE a.stop=53
+AND b.stop=149
+```
+6. The query shown is similar to the previous one, however by joining two copies of the stops table we can refer to stops by name rather than by number. Change the query so that the services between 'Craiglockhart' and 'London Road' are shown. If you are tired of these places try 'Fairmilehead' against 'Tollcross'
+``` sql
+SELECT a.company, a.num, stopa.name, stopb.name
+FROM route a JOIN route b ON
+  (a.company=b.company AND a.num=b.num)
+  JOIN stops stopa ON (a.stop=stopa.id)
+  JOIN stops stopb ON (b.stop=stopb.id)
+WHERE stopa.name='Craiglockhart'
+AND stopb.name='London Road'
+```
+7. Give a list of all the services which connect stops 115 and 137 ('Haymarket' and 'Leith')
+``` sql
+SELECT DISTINCT a.company, a.num 
+FROM route AS a JOIN route AS b 
+ON a.company=b.company AND a.num=b.num
+WHERE a.stop=115 AND b.stop=137
+```
+8. Give a list of the services which connect the stops 'Craiglockhart' and 'Tollcross'
+``` sql
+SELECT a.company, a.num 
+FROM route AS a
+JOIN route AS b ON a.company=b.company AND a.num=b.num
+JOIN stops AS stopa ON a.stop=stopa.id
+JOIN stops AS stopb ON b.stop=stopb.id
+WHERE stopa.name='Craiglockhart'
+AND stopb.name='Tollcross'
+```
+9. Give a distinct list of the stops which may be reached from 'Craiglockhart' by taking one bus, including 'Craiglockhart' itself, offered by the LRT company. Include the company and bus no. of the relevant services.
+``` sql
+SELECT DISTINCT stopsb.name, a.company, a.num 
+FROM route AS a
+JOIN route AS b ON a.company=b.company AND a.num=b.num
+JOIN stops AS stopsa ON a.stop=stopsa.id
+JOIN stops AS stopsb ON b.stop=stopsb.id
+WHERE stopsa.name = 'Craiglockhart'
+```
+10. Find the routes involving two buses that can go from Craiglockhart to Lochend.
+Show the bus no. and company for the first bus, the name of the stop for the transfer,
+and the bus no. and company for the second bus.
+``` sql
+SELECT DISTINCT a.num, a.company, stopsb.name, c.num, c.company
+FROM route AS a
+JOIN route AS b ON a.company=b.company AND a.num=b.num
+JOIN stops AS stopsa ON a.stop=stopsa.id
+JOIN stops AS stopsb ON b.stop=stopsb.id
+JOIN
+(SELECT DISTINCT a.num, a.company, stopsa.name
+FROM route AS a
+JOIN route AS b ON a.company=b.company AND a.num=b.num
+JOIN stops AS stopsa ON a.stop=stopsa.id
+JOIN stops AS stopsb ON b.stop=stopsb.id
+WHERE stopsb.name = 'Lochend')
+AS c ON stopsb.name=c.name
+WHERE stopsa.name = 'Craiglockhart'
+ORDER BY a.num, stopsb.name, c.num
+```
 
 
 
@@ -1067,3 +1154,372 @@ SELECT name FROM world
 ```
 Brazil    <br>
 Colombia  <br>
+
+## Quiz 3
+1. Pick the code which shows the name of winner's names beginning with C and ending in n
+``` sql
+SELECT winner FROM nobel
+ WHERE winner LIKE 'C%' AND winner LIKE '%n'
+```
+
+2. Select the code that shows how many Chemistry awards were given between 1950 and 1960
+``` sql
+SELECT COUNT(subject) FROM nobel
+ WHERE subject = 'Chemistry'
+   AND yr BETWEEN 1950 and 1960
+```
+
+3. Pick the code that shows the amount of years where no Medicine awards were given
+``` sql
+SELECT COUNT(DISTINCT yr) FROM nobel
+ WHERE yr NOT IN (SELECT DISTINCT yr FROM nobel WHERE subject = 'Medicine')
+```
+'name' should be name<br>
+
+4. Select the result that would be obtained from the following code:
+``` sql
+SELECT subject, winner FROM nobel WHERE winner LIKE 'Sir%' AND yr LIKE '196%'
+```
+Medicine	Sir John Eccles<br>
+Medicine	Sir Frank Macfarlane Burnet<br>
+
+
+5. Select the code which would show the year when neither a Physics or Chemistry award was given
+``` sql
+SELECT yr FROM nobel
+ WHERE yr NOT IN(SELECT yr 
+                   FROM nobel
+                 WHERE subject IN ('Chemistry','Physics'))
+```
+
+6. Select the code which shows the years when a Medicine award was given but no Peace or Literature award was
+``` sql
+SELECT DISTINCT yr
+  FROM nobel
+ WHERE subject='Medicine' 
+   AND yr NOT IN(SELECT yr FROM nobel 
+                  WHERE subject='Literature')
+   AND yr NOT IN (SELECT yr FROM nobel
+                   WHERE subject='Peace')
+```
+
+7. Pick the result that would be obtained from the following code:
+``` sql
+SELECT subject, COUNT(subject) 
+  FROM nobel 
+ WHERE yr ='1960' 
+ GROUP BY subject
+```
+Chemistry	1<br>
+Literature	1<br>
+Medicine	2<br>
+Peace	1<br>
+Physics	1<br>
+
+## Quiz 4
+1. Select the code that shows the name, region and population of the smallest country in each region
+``` sql
+SELECT region, name, population FROM bbc x WHERE population <= ALL (SELECT population FROM bbc y WHERE y.region=x.region AND population>0)
+```
+
+2. Select the code that shows the countries belonging to regions with all populations over 50000
+``` sql
+SELECT name,region,population FROM bbc x WHERE 50000 < ALL (SELECT population FROM bbc y WHERE x.region=y.region AND y.population>0)
+```
+
+3. Select the code that shows the countries with a less than a third of the population of the countries around it
+``` sql
+SELECT name, region FROM bbc x
+ WHERE population < ALL (SELECT population/3 FROM bbc y WHERE y.region = x.region AND y.name != x.name)
+```
+'name' should be name<br>
+
+4. Select the result that would be obtained from the following code:
+``` sql
+SELECT name FROM bbc
+ WHERE population >
+       (SELECT population
+          FROM bbc
+         WHERE name='United Kingdom')
+   AND region IN
+       (SELECT region
+          FROM bbc
+         WHERE name = 'United Kingdom')
+```
+Table-D<br>
+France<br>
+Germany<br>
+Russia<br>
+Turkey<br>
+
+5. Select the code that would show the countries with a greater GDP than any country in Africa (some countries may have NULL gdp values).
+``` sql
+SELECT name FROM bbc
+ WHERE gdp > (SELECT MAX(gdp) FROM bbc WHERE region = 'Africa')
+```
+
+6. Select the code that shows the countries with population smaller than Russia but bigger than Denmark
+``` sql
+SELECT name FROM bbc
+ WHERE population < (SELECT population FROM bbc WHERE name='Russia')
+   AND population > (SELECT population FROM bbc WHERE name='Denmark')
+```
+
+7. Select the result that would be obtained from the following code:
+``` sql
+SELECT name FROM bbc
+ WHERE population > ALL
+       (SELECT MAX(population)
+          FROM bbc
+         WHERE region = 'Europe')
+   AND region = 'South Asia'
+```
+Table-B<br>
+Bangladesh<br>
+India<br>
+Pakistan<br>
+
+## Quiz 5
+1. Select the statement that shows the sum of population of all countries in 'Europe'
+``` sql
+SELECT SUM(population) FROM bbc WHERE region = 'Europe'
+```
+
+2. Select the statement that shows the number of countries with population smaller than 150000
+``` sql
+SELECT COUNT(name) FROM bbc WHERE population < 150000
+```
+
+3. Select the list of core SQL aggregate functions
+AVG(), COUNT(), MAX(), MIN(), SUM()
+
+4. Select the result that would be obtained from the following code:
+``` sql
+SELECT region, SUM(area)
+   FROM bbc 
+  WHERE SUM(area) > 15000000 
+  GROUP BY region
+```
+No result due to invalid use of the WHERE function<br>
+
+5. Select the statement that shows the average population of 'Poland', 'Germany' and 'Denmark'
+``` sql
+SELECT AVG(population) FROM bbc WHERE name IN ('Poland', 'Germany', 'Denmark')
+```
+
+6. Select the statement that shows the medium population density of each region
+``` sql
+SELECT region, SUM(population)/SUM(area) AS density FROM bbc GROUP BY region
+```
+
+7. Select the statement that shows the name and population density of the country with the largest population
+``` sql
+SELECT name, population/area AS density FROM bbc WHERE population = (SELECT MAX(population) FROM bbc)
+```
+
+8. Pick the result that would be obtained from the following code:
+``` sql
+SELECT region, SUM(area) 
+  FROM bbc 
+ GROUP BY region 
+ HAVING SUM(area)<= 20000000
+```
+Table-D<br>
+Americas	732240<br>
+Middle East	13403102<br>
+South America	17740392<br>
+South Asia	9437710<br>
+
+## Quiz 6
+1. You want to find the stadium where player 'Dimitris Salpingidis' scored. Select the JOIN condition to use:
+``` sql
+game  JOIN goal ON (id=matchid)
+```
+
+2. You JOIN the tables goal and eteam in an SQL statement. Indicate the list of column names that may be used in the SELECT line:
+``` sql
+matchid, teamid, player, gtime, id, teamname, coach
+```
+
+3. Select the code which shows players, their team and the amount of goals they scored against Greece(GRE).
+``` sql
+SELECT player, teamid, COUNT(*)
+  FROM game JOIN goal ON matchid = id
+ WHERE (team1 = "GRE" OR team2 = "GRE")
+   AND teamid != 'GRE'
+ GROUP BY player, teamid
+ ```
+
+4. Select the result that would be obtained from the following code:
+``` sql
+SELECT DISTINCT teamid, mdate
+  FROM goal JOIN game on (matchid=id)
+ WHERE mdate = '9 June 2012'
+```
+DEN	9 June 2012<br>
+GER	9 June 2012<br>
+
+5. Select the code which would show the player and their team for those who have scored against Poland(POL) in National Stadium, Warsaw.
+``` sql
+SELECT DISTINCT player, teamid 
+   FROM game JOIN goal ON matchid = id 
+  WHERE stadium = 'National Stadium, Warsaw' 
+ AND (team1 = 'POL' OR team2 = 'POL')
+   AND teamid != 'POL'
+```
+
+6. Select the code which shows the player, their team and the time they scored, for players who have played in Stadion Miejski (Wroclaw) but not against Italy(ITA).
+``` sql
+SELECT DISTINCT player, teamid, gtime
+  FROM game JOIN goal ON matchid = id
+ WHERE stadium = 'Stadion Miejski (Wroclaw)'
+   AND (( teamid = team2 AND team1 != 'ITA') OR ( teamid = team1 AND team2 != 'ITA'))
+```
+
+7. Select the result that would be obtained from this code:
+``` sql
+SELECT teamname, COUNT(*)
+  FROM eteam JOIN goal ON teamid = id
+ GROUP BY teamname
+HAVING COUNT(*) < 3
+```
+Netherlands	2<br>
+Poland	2<br>
+Republic of Ireland	1<br>
+Ukraine	2<br>
+
+## Quiz 7
+1. Select the statement which lists the unfortunate directors of the movies which have caused financial loses (gross < budget)
+``` sql
+SELECT JOIN(name FROM actor, movie
+       ON actor.id:director WHERE gross < budget)
+ GROUP BY name
+```
+
+2. Select the correct example of JOINing three tables
+``` sql
+SELECT *
+  FROM actor JOIN casting ON actor.id = actorid
+  JOIN movie ON movie.id = movieid
+```
+
+3. Select the statement that shows the list of actors called 'John' by order of number of movies in which they acted
+``` sql
+SELECT name, COUNT(movieid)
+  FROM casting JOIN actor ON actorid=actor.id
+ WHERE name LIKE 'John %'
+ GROUP BY name ORDER BY 2 DESC
+ ```
+
+4. Select the result that would be obtained from the following code:
+``` sql
+SELECT DISTINCT teamid, mdate
+  FROM goal JOIN game on (matchid=id)
+ WHERE mdate = '9 June 2012'
+```
+Table-B<br>
+"Crocodile" Dundee<br>
+Crocodile Dundee in Los Angeles<br>
+Flipper<br>
+Lightning Jack<br>
+
+5. Select the statement that lists all the actors that starred in movies directed by Ridley Scott who has id 351
+``` sql
+SELECT name
+  FROM movie JOIN casting ON movie.id = movieid
+  JOIN actor ON actor.id = actorid
+WHERE ord = 1 AND director = 351
+```
+
+6. There are two sensible ways to connect movie and actor. They are:
+* link the director column in movies with the primary key in actor
+* connect the primary keys of movie and actor via the casting table
+
+7. Select the result that would be obtained from the following code:
+``` sql
+SELECT title, yr 
+   FROM movie, casting, actor 
+  WHERE name='Robert De Niro' AND movieid=movie.id AND actorid=actor.id AND ord = 3
+```
+Table-B<br>
+A Bronx Tale	1993<br>
+Bang the Drum Slowly	1973<br>
+Limitless	2011<br>
+
+## Quiz 8
+1. Select the code which uses an outer join correctly.
+```sql
+SELECT teacher.name, dept.name FROM teacher LEFT OUTER JOIN dept ON (teacher.dept = dept.id)
+```
+
+2. Select the correct statement that shows the name of department which employs Cutflower -
+``` sql
+SELECT dept.name FROM teacher JOIN dept ON (dept.id = teacher.dept) WHERE teacher.name = 'Cutflower'
+```
+
+3. Select out of following the code which uses a JOIN to show a list of all the departments and number of employed teachers
+``` sql
+SELECT dept.name, COUNT(teacher.name) FROM teacher RIGHT JOIN dept ON dept.id = teacher.dept GROUP BY dept.name
+```
+
+4. Using SELECT name, dept, COALESCE(dept, 0) AS result FROM teacher on teacher table will:
+display 0 in result column for all teachers without department<br>
+
+5. Query:
+``` sql
+SELECT name,
+       CASE WHEN phone = 2752 THEN 'two'
+            WHEN phone = 2753 THEN 'three'
+            WHEN phone = 2754 THEN 'four'
+            END AS digit
+  FROM teacher
+```
+shows following 'digit':<br>
+'four' for Throd<br>
+
+6. Select the result that would be obtained from the following code:
+``` sql
+SELECT name, 
+      CASE 
+       WHEN dept 
+        IN (1) 
+        THEN 'Computing' 
+       ELSE 'Other' 
+      END 
+  FROM teacher
+```
+Table-A<br>
+Shrivell	Computing<br>
+Throd	Computing<br>
+Splint	Computing<br>
+Spiregrain	Other<br>
+Cutflower	Other<br>
+Deadyawn	Other<br>
+
+## Quiz 9
+1. Select the code that would show it is possible to get from Craiglockhart to Haymarket
+``` sql
+SELECT DISTINCT a.name, b.name
+  FROM stops a JOIN route z ON a.id=z.stop
+  JOIN route y ON y.num = z.num
+  JOIN stops b ON y.stop=b.id
+ WHERE a.name='Craiglockhart' AND b.name ='Haymarket'
+```
+
+2. Select the code that shows the stops that are on route.num '2A' which can be reached with one bus from Haymarket?
+``` sql
+SELECT S2.id, S2.name, R2.company, R2.num
+  FROM stops S1, stops S2, route R1, route R2
+ WHERE S1.name='Haymarket' AND S1.id=R1.stop
+   AND R1.company=R2.company AND R1.num=R2.num
+   AND R2.stop=S2.id AND R2.num='2A'
+```
+
+3. Select the code that shows the services available from Tollcross?
+``` sql
+SELECT a.company, a.num, stopa.name, stopb.name
+  FROM route a JOIN route b ON (a.company=b.company AND a.num=b.num)
+  JOIN stops stopa ON (a.stop=stopa.id)
+  JOIN stops stopb ON (b.stop=stopb.id)
+ WHERE stopa.name='Tollcross'
+ ```
